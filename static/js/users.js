@@ -65,6 +65,8 @@ async function clearUserData() {
   state.loadedQuestionRanges = [];
   state.questionLoadPromises = new Map();
   state.answers = new Map();
+  state.answeredIndexes = new Set();
+  state.wrongIndexes = new Set();
   state.current = 0;
   await loadUsers();
   await loadExamList();

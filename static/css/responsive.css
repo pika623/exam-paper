@@ -19,6 +19,17 @@
   overflow: auto;
 }
 
+.review-pager {
+  display: grid;
+  place-items: center;
+  padding: 6px 0 18px;
+}
+
+.review-load-button {
+  width: 160px;
+  min-height: 44px;
+}
+
 .wrong-card {
   border: 1px solid var(--line);
   border-radius: 8px;

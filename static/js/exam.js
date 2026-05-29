@@ -61,15 +61,11 @@ function selectedExamWrongCount() {
 }
 
 function currentExamWrongCount() {
-  let wrong = 0;
-  state.answers.forEach((value) => {
-    if (value.judged && !value.correct) wrong += 1;
-  });
-  return wrong;
+  return state.wrongIndexes?.size || 0;
 }
 
 function questionTotal() {
-  return state.questionTotal || state.questions.length || state.exam?.questionIds?.length || 0;
+  return state.questionTotal || state.questions.length || 0;
 }
 
 function resetQuestionCache(total = 0) {
@@ -87,6 +83,12 @@ function mergeQuestionWindow(questions, offset = 0) {
   if (questions.length) state.loadedQuestionRanges.push([offset, offset + questions.length - 1]);
 }
 
+function mergeAnswers(answers) {
+  Object.entries(answers || {}).forEach(([questionId, answer]) => {
+    state.answers.set(questionId, answer);
+  });
+}
+
 async function ensureQuestionLoaded(index) {
   if (!state.userId || !state.exam || index < 0 || index >= questionTotal()) return;
   if (state.questions[index]) return;
@@ -98,6 +100,7 @@ async function ensureQuestionLoaded(index) {
       api(url)
         .then((payload) => {
           mergeQuestionWindow(payload.questions || [], Number(payload.offset || 0));
+          mergeAnswers(payload.answers || {});
           state.questionTotal = Number(payload.total || state.questionTotal || 0);
         })
         .finally(() => state.questionLoadPromises.delete(key))
@@ -245,6 +248,8 @@ async function deleteSelectedExam() {
     state.loadedQuestionRanges = [];
     state.questionLoadPromises = new Map();
     state.answers = new Map();
+    state.answeredIndexes = new Set();
+    state.wrongIndexes = new Set();
     state.doubts = new Set();
     state.current = 0;
   }
@@ -255,14 +260,24 @@ async function deleteSelectedExam() {
 
 function loadExamPayload(payload) {
   state.exam = payload.exam;
-  const total = Number(payload.total || state.exam?.questionIds?.length || payload.questions?.length || 0);
+  const total = Number(payload.total || payload.questions?.length || 0);
   resetQuestionCache(total);
   mergeQuestionWindow(payload.questions || [], Number(payload.offset || 0));
-  state.answers = new Map(Object.entries(payload.answers || {}));
+  state.answers = new Map();
+  mergeAnswers(payload.answers || {});
+  state.answeredIndexes = new Set(payload.answeredIndexes || []);
+  state.wrongIndexes = new Set(payload.wrongIndexes || []);
   state.doubts = new Set(payload.doubts || []);
   state.current = Math.min(state.exam.current || 0, Math.max(0, questionTotal() - 1));
   renderQuestion();
   renderStats();
+}
+
+function applyExamState(exam) {
+  if (!exam || !state.exam || exam.id !== state.exam.id) return;
+  if (Number.isInteger(exam.current)) state.exam.current = exam.current;
+  if (typeof exam.completed === "boolean") state.exam.completed = exam.completed;
+  if (exam.updatedAt) state.exam.updatedAt = exam.updatedAt;
 }
 
 function showSetup() {
@@ -395,6 +410,9 @@ async function saveCurrentAnswer(selected) {
   const correct = isCorrect(selected, question.answer);
   const localAnswer = { selected: normalizeChoice(selected), correct, judged: true };
   state.answers.set(question.id, localAnswer);
+  state.answeredIndexes.add(state.current);
+  if (correct) state.wrongIndexes.delete(state.current);
+  else state.wrongIndexes.add(state.current);
   renderQuestion();
   const payload = await api("/api/exams/answer", {
     method: "POST",
@@ -406,8 +424,13 @@ async function saveCurrentAnswer(selected) {
       current: state.current,
     }),
   });
-  state.exam = payload.exam;
+  applyExamState(payload.exam);
   state.answers.set(question.id, payload.answer);
+  if (payload.answer?.judged) {
+    state.answeredIndexes.add(state.current);
+    if (payload.answer.correct) state.wrongIndexes.delete(state.current);
+    else state.wrongIndexes.add(state.current);
+  }
   await loadUsers();
   await loadExamList();
   renderQuestion();
@@ -437,11 +460,8 @@ async function toggleDoubt() {
 }
 
 function findUnanswered(direction) {
-  const ids = state.exam?.questionIds || [];
   for (let index = state.current + direction; index >= 0 && index < questionTotal(); index += direction) {
-    const id = ids[index] || state.questions[index]?.id;
-    const answer = id ? state.answers.get(id) : null;
-    if (!answer?.judged) return index;
+    if (!state.answeredIndexes.has(index)) return index;
   }
   return -1;
 }
@@ -474,14 +494,9 @@ function renderResult(question, saved) {
 function renderStats() {
   els.wrongBookStat?.classList.remove("hidden");
   els.totalCount.textContent = questionTotal();
-  let correct = 0;
-  let wrong = 0;
-  state.answers.forEach((value) => {
-    if (!value.judged) return;
-    if (value.correct) correct += 1;
-    else wrong += 1;
-  });
-  els.correctCount.textContent = correct;
+  const wrong = state.wrongIndexes?.size || 0;
+  const answered = answeredCount();
+  els.correctCount.textContent = Math.max(0, answered - wrong);
   els.wrongCount.textContent = wrong;
   els.wrongBookCount.textContent = currentUser()?.wrongBookCount || 0;
 }
@@ -493,7 +508,7 @@ function saveProgress() {
     body: JSON.stringify({ userId: state.userId, examId: state.exam.id, current: state.current }),
   })
     .then((payload) => {
-      state.exam = payload.exam;
+      applyExamState(payload.exam);
     })
     .catch((error) => console.warn(error));
 }

@@ -9,6 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	defaultReviewPageSize = 20
+	maxReviewPageSize     = 100
+)
+
 func (ctl *Controller) Users(c *gin.Context) {
 	switch c.Request.Method {
 	case http.MethodGet:
@@ -152,7 +157,7 @@ func (ctl *Controller) ExamAnswer(c *gin.Context) {
 		writeError(c, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(c, gin.H{"exam": exam, "answer": answer})
+	writeJSON(c, gin.H{"exam": examState(exam), "answer": answer})
 }
 
 func (ctl *Controller) ExamProgress(c *gin.Context) {
@@ -169,16 +174,26 @@ func (ctl *Controller) ExamProgress(c *gin.Context) {
 		writeError(c, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(c, gin.H{"exam": exam})
+	writeJSON(c, gin.H{"exam": examState(exam)})
+}
+
+func examState(exam model.ExamRecord) model.ExamState {
+	return model.ExamState{
+		ID:        exam.ID,
+		Current:   exam.Current,
+		Completed: exam.Completed,
+		UpdatedAt: exam.UpdatedAt,
+	}
 }
 
 func (ctl *Controller) ExamWrong(c *gin.Context) {
-	wrongs, err := ctl.store.ExamWrongQuestions(c.Query("userId"), c.Query("examId"))
+	offset, limit := reviewPagination(c)
+	page, err := ctl.store.ExamWrongQuestionPage(c.Query("userId"), c.Query("examId"), offset, limit)
 	if err != nil {
 		writeError(c, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(c, gin.H{"items": wrongs})
+	writeJSON(c, page)
 }
 
 func (ctl *Controller) WrongPracticeExam(c *gin.Context) {
@@ -250,21 +265,23 @@ func (ctl *Controller) QuestionCount(c *gin.Context) {
 }
 
 func (ctl *Controller) WrongBook(c *gin.Context) {
-	wrongs, err := ctl.store.WrongBook(c.Query("userId"))
+	offset, limit := reviewPagination(c)
+	page, err := ctl.store.WrongBookPage(c.Query("userId"), offset, limit)
 	if err != nil {
 		writeError(c, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(c, gin.H{"items": wrongs})
+	writeJSON(c, page)
 }
 
 func (ctl *Controller) FeaturedWrongBook(c *gin.Context) {
-	wrongs, err := ctl.store.FeaturedWrongBook(c.Query("userId"))
+	offset, limit := reviewPagination(c)
+	page, err := ctl.store.FeaturedWrongBookPage(c.Query("userId"), offset, limit)
 	if err != nil {
 		writeError(c, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(c, gin.H{"items": wrongs})
+	writeJSON(c, page)
 }
 
 func (ctl *Controller) Doubts(c *gin.Context) {
@@ -303,4 +320,19 @@ func (ctl *Controller) writeExamPayload(c *gin.Context, exam model.ExamRecord, e
 		return
 	}
 	writeJSON(c, payload)
+}
+
+func reviewPagination(c *gin.Context) (int, int) {
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(defaultReviewPageSize)))
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		limit = defaultReviewPageSize
+	}
+	if limit > maxReviewPageSize {
+		limit = maxReviewPageSize
+	}
+	return offset, limit
 }

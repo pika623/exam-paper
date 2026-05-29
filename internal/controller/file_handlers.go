@@ -1,4 +1,4 @@
-﻿package controller
+package controller
 
 import (
 	"exam-paper/internal/model"
@@ -75,7 +75,7 @@ func (ctl *Controller) Import(c *gin.Context) {
 	}
 
 	var (
-		results []model.ParseResult
+		results []model.ParseSummary
 		total   int
 	)
 	for fieldName, headers := range c.Request.MultipartForm.File {
@@ -86,7 +86,7 @@ func (ctl *Controller) Import(c *gin.Context) {
 				return
 			}
 			total += result.QuestionCount
-			results = append(results, result)
+			results = append(results, parseSummary(result))
 		}
 	}
 	if len(results) == 0 {
@@ -94,6 +94,15 @@ func (ctl *Controller) Import(c *gin.Context) {
 		return
 	}
 	writeJSON(c, gin.H{"questionCount": total, "files": results})
+}
+
+func parseSummary(result model.ParseResult) model.ParseSummary {
+	return model.ParseSummary{
+		Source:        result.Source,
+		Path:          result.Path,
+		QuestionCount: result.QuestionCount,
+		Preview:       result.Preview,
+	}
 }
 
 func (ctl *Controller) parseUploadedFile(header *multipart.FileHeader, relativePath string) (model.ParseResult, error) {

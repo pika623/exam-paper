@@ -52,13 +52,19 @@ func (s *Service) ExamPayloadFor(exam model.ExamRecord) (model.ExamPayload, erro
 	if err != nil {
 		return model.ExamPayload{}, err
 	}
+	answeredIndexes, wrongIndexes := answerIndexes(exam)
 	return model.ExamPayload{
-		Exam:      exam,
-		Questions: questions,
-		Offset:    offset,
-		Total:     len(exam.QuestionIDs),
-		Answers:   exam.Answers,
-		Doubts:    doubts,
+		Exam:            examMeta(exam),
+		Questions:       questions,
+		Offset:          offset,
+		Total:           len(exam.QuestionIDs),
+		Answers:         windowAnswers(exam, questions),
+		Answered:        len(answeredIndexes),
+		Correct:         len(answeredIndexes) - len(wrongIndexes),
+		Wrong:           len(wrongIndexes),
+		AnsweredIndexes: answeredIndexes,
+		WrongIndexes:    wrongIndexes,
+		Doubts:          doubts,
 	}, nil
 }
 
@@ -67,7 +73,54 @@ func (s *Service) ExamQuestionsPayload(exam model.ExamRecord, center int, limit 
 	if err != nil {
 		return model.ExamQuestionsPayload{}, err
 	}
-	return model.ExamQuestionsPayload{Questions: questions, Offset: offset, Total: len(exam.QuestionIDs)}, nil
+	return model.ExamQuestionsPayload{
+		Questions: questions,
+		Answers:   windowAnswers(exam, questions),
+		Offset:    offset,
+		Total:     len(exam.QuestionIDs),
+	}, nil
+}
+
+func examMeta(exam model.ExamRecord) model.ExamMeta {
+	return model.ExamMeta{
+		ID:        exam.ID,
+		UserID:    exam.UserID,
+		Title:     exam.Title,
+		Sources:   append([]string(nil), exam.Sources...),
+		Current:   exam.Current,
+		Completed: exam.Completed,
+		CreatedAt: exam.CreatedAt,
+		UpdatedAt: exam.UpdatedAt,
+	}
+}
+
+func windowAnswers(exam model.ExamRecord, questions []model.Question) map[string]model.AnswerRecord {
+	answers := map[string]model.AnswerRecord{}
+	for _, question := range questions {
+		answer, ok := exam.Answers[question.ID]
+		if ok {
+			answers[question.ID] = answer
+		}
+	}
+	return answers
+}
+
+func answerIndexes(exam model.ExamRecord) ([]int, []int) {
+	var (
+		answered []int
+		wrong    []int
+	)
+	for index, questionID := range exam.QuestionIDs {
+		answer, ok := exam.Answers[questionID]
+		if !ok || !answer.Judged {
+			continue
+		}
+		answered = append(answered, index)
+		if !answer.Correct {
+			wrong = append(wrong, index)
+		}
+	}
+	return answered, wrong
 }
 
 func (s *Service) ExamQuestionWindow(exam model.ExamRecord, center int, limit int) ([]model.Question, int, error) {

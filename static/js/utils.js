@@ -1,9 +1,5 @@
 ﻿function answeredCount() {
-  let count = 0;
-  state.answers.forEach((value) => {
-    if (value.judged) count += 1;
-  });
-  return count;
+  return state.answeredIndexes?.size || 0;
 }
 
 function currentUser() {

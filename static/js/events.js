@@ -13,6 +13,8 @@ els.userSelect.addEventListener("change", async () => {
   state.loadedQuestionRanges = [];
   state.questionLoadPromises = new Map();
   state.answers = new Map();
+  state.answeredIndexes = new Set();
+  state.wrongIndexes = new Set();
   state.doubts = new Set();
   await loadExamList();
   if (state.incompleteExams.length) await continueExam(true);
@@ -50,6 +52,7 @@ els.nextButton.addEventListener("click", () => {
 });
 els.nextUnansweredButton.addEventListener("click", () => goUnanswered(1));
 els.closeReviewButton.addEventListener("click", () => {
+  state.reviewPager = null;
   if (state.reviewReturnMode === "question" && state.exam && questionTotal()) showQuestion();
   else showSetup();
 });

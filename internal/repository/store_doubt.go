@@ -1,4 +1,4 @@
-﻿package repository
+package repository
 
 import (
 	"exam-paper/internal/model"
@@ -73,10 +73,9 @@ func (s *Store) DoubtBook(userID string) ([]model.WrongQuestion, error) {
 		if !ok {
 			continue
 		}
+		q.Raw = ""
 		rec := record
 		items = append(items, model.WrongQuestion{Question: q, Doubt: &rec})
 	}
 	return items, nil
 }
-
-

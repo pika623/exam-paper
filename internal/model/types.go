@@ -26,6 +26,13 @@ type ParseResult struct {
 	Preview       string     `json:"preview"`
 }
 
+type ParseSummary struct {
+	Source        string `json:"source"`
+	Path          string `json:"path"`
+	QuestionCount int    `json:"questionCount"`
+	Preview       string `json:"preview"`
+}
+
 type LibraryFile struct {
 	Name   string `json:"name"`
 	Path   string `json:"path"`
@@ -50,6 +57,24 @@ type ExamRecord struct {
 	Completed   bool                    `json:"completed"`
 	CreatedAt   string                  `json:"createdAt"`
 	UpdatedAt   string                  `json:"updatedAt"`
+}
+
+type ExamState struct {
+	ID        string `json:"id"`
+	Current   int    `json:"current"`
+	Completed bool   `json:"completed"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+type ExamMeta struct {
+	ID        string   `json:"id"`
+	UserID    string   `json:"userId"`
+	Title     string   `json:"title"`
+	Sources   []string `json:"sources"`
+	Current   int      `json:"current"`
+	Completed bool     `json:"completed"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
 }
 
 type AnswerRecord struct {
@@ -101,18 +126,24 @@ type ExamSummary struct {
 }
 
 type ExamPayload struct {
-	Exam      ExamRecord              `json:"exam"`
-	Questions []Question              `json:"questions"`
-	Offset    int                     `json:"offset"`
-	Total     int                     `json:"total"`
-	Answers   map[string]AnswerRecord `json:"answers"`
-	Doubts    []string                `json:"doubts"`
+	Exam            ExamMeta                `json:"exam"`
+	Questions       []Question              `json:"questions"`
+	Offset          int                     `json:"offset"`
+	Total           int                     `json:"total"`
+	Answers         map[string]AnswerRecord `json:"answers"`
+	Answered        int                     `json:"answered"`
+	Correct         int                     `json:"correct"`
+	Wrong           int                     `json:"wrong"`
+	AnsweredIndexes []int                   `json:"answeredIndexes"`
+	WrongIndexes    []int                   `json:"wrongIndexes"`
+	Doubts          []string                `json:"doubts"`
 }
 
 type ExamQuestionsPayload struct {
-	Questions []Question `json:"questions"`
-	Offset    int        `json:"offset"`
-	Total     int        `json:"total"`
+	Questions []Question              `json:"questions"`
+	Answers   map[string]AnswerRecord `json:"answers"`
+	Offset    int                     `json:"offset"`
+	Total     int                     `json:"total"`
 }
 
 type WrongQuestion struct {
@@ -120,4 +151,12 @@ type WrongQuestion struct {
 	Answer   AnswerRecord `json:"answer"`
 	Wrong    WrongRecord  `json:"wrong"`
 	Doubt    *DoubtRecord `json:"doubt,omitempty"`
+}
+
+type WrongQuestionPage struct {
+	Items   []WrongQuestion `json:"items"`
+	Total   int             `json:"total"`
+	Offset  int             `json:"offset"`
+	Limit   int             `json:"limit"`
+	HasMore bool            `json:"hasMore"`
 }

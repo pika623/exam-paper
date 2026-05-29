@@ -12,10 +12,13 @@
   loadedQuestionRanges: [],
   questionLoadPromises: new Map(),
   answers: new Map(),
+  answeredIndexes: new Set(),
+  wrongIndexes: new Set(),
   doubts: new Set(),
   exam: null,
   current: 0,
   reviewReturnMode: "setup",
+  reviewPager: null,
 };
 
 const els = {
