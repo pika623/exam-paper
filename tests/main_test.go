@@ -1,4 +1,4 @@
-﻿package tests
+package tests
 
 import (
 	"exam-paper/internal/model"
@@ -104,5 +104,46 @@ func TestStoreExamWrongBookAndClear(t *testing.T) {
 	}
 	if len(book) != 0 {
 		t.Fatalf("wrong book after clear = %#v, want empty", book)
+	}
+}
+
+func TestExamPayloadUsesQuestionWindow(t *testing.T) {
+	tmp := t.TempDir()
+	store, err := repository.NewStore(filepath.Join(tmp, "exam-paper.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	bank := questionbank.New(tmp, store)
+	store.SetQuestionFinder(bank)
+	questions := make([]model.Question, 0, 40)
+	for i := 0; i < 40; i++ {
+		id := string(rune('a' + i))
+		questions = append(questions, model.Question{ID: id, Source: "mock.docx", Stem: id, Options: []model.Option{{Label: "A", Text: "a"}}, Answer: []string{"A"}})
+	}
+	bank.RememberQuestions("mock.docx", questions)
+
+	user, err := store.RegisterUser("bob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	exam, err := store.CreateExam(user.ID, []string{"mock.docx"}, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exam.Current = 20
+	payload, err := bank.ExamPayloadFor(exam)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Total != 40 {
+		t.Fatalf("total = %d, want 40", payload.Total)
+	}
+	if len(payload.Questions) != 25 {
+		t.Fatalf("window size = %d, want 25", len(payload.Questions))
+	}
+	if payload.Offset == 0 {
+		t.Fatalf("offset = %d, want centered window", payload.Offset)
 	}
 }

@@ -1,9 +1,10 @@
-﻿package controller
+package controller
 
 import (
 	"exam-paper/internal/model"
 	"exam-paper/internal/utils"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +14,9 @@ func (ctl *Controller) Users(c *gin.Context) {
 	case http.MethodGet:
 		writeJSON(c, gin.H{"users": ctl.store.ListUsers()})
 	case http.MethodPost:
-		var req struct{ Name string `json:"name"` }
+		var req struct {
+			Name string `json:"name"`
+		}
 		if !bindJSON(c, &req) {
 			return
 		}
@@ -27,7 +30,9 @@ func (ctl *Controller) Users(c *gin.Context) {
 }
 
 func (ctl *Controller) ClearUser(c *gin.Context) {
-	var req struct{ UserID string `json:"userId"` }
+	var req struct {
+		UserID string `json:"userId"`
+	}
 	if !bindJSON(c, &req) {
 		return
 	}
@@ -101,6 +106,28 @@ func (ctl *Controller) ExamList(c *gin.Context) {
 		return
 	}
 	writeJSON(c, gin.H{"exams": exams})
+}
+
+func (ctl *Controller) ExamQuestions(c *gin.Context) {
+	userID := c.Query("userId")
+	examID := c.Query("examId")
+	if userID == "" || examID == "" {
+		writeError(c, "缺少 userId 或 examId。", http.StatusBadRequest)
+		return
+	}
+	center, _ := strconv.Atoi(c.DefaultQuery("center", "0"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "25"))
+	exam, err := ctl.store.ExamByID(userID, examID)
+	if err != nil {
+		writeError(c, err.Error(), http.StatusBadRequest)
+		return
+	}
+	payload, err := ctl.bank.ExamQuestionsPayload(exam, center, limit)
+	if err != nil {
+		writeError(c, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(c, payload)
 }
 
 func (ctl *Controller) ExamAnswer(c *gin.Context) {
@@ -203,7 +230,9 @@ func (ctl *Controller) DoubtPracticeExam(c *gin.Context) {
 }
 
 func (ctl *Controller) QuestionCount(c *gin.Context) {
-	var req struct{ Sources []string `json:"sources"` }
+	var req struct {
+		Sources []string `json:"sources"`
+	}
 	if !bindJSON(c, &req) {
 		return
 	}

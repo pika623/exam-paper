@@ -61,6 +61,9 @@ async function clearUserData() {
   });
   state.exam = null;
   state.questions = [];
+  state.questionTotal = 0;
+  state.loadedQuestionRanges = [];
+  state.questionLoadPromises = new Map();
   state.answers = new Map();
   state.current = 0;
   await loadUsers();

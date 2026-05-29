@@ -9,6 +9,9 @@ els.userSelect.addEventListener("change", async () => {
   localStorage.setItem("examPaper.userId", state.userId);
   state.exam = null;
   state.questions = [];
+  state.questionTotal = 0;
+  state.loadedQuestionRanges = [];
+  state.questionLoadPromises = new Map();
   state.answers = new Map();
   state.doubts = new Set();
   await loadExamList();
@@ -40,19 +43,14 @@ els.doubtButton.addEventListener("click", () => toggleDoubt().catch((error) => a
 els.backSetupButton.addEventListener("click", showSetup);
 els.prevUnansweredButton.addEventListener("click", () => goUnanswered(-1));
 els.prevButton.addEventListener("click", () => {
-  state.current = Math.max(0, state.current - 1);
-  saveProgress();
-  renderQuestion();
+  goQuestion(Math.max(0, state.current - 1)).catch((error) => alert(error.message));
 });
 els.nextButton.addEventListener("click", () => {
-  state.current = Math.min(state.questions.length - 1, state.current + 1);
-  if (state.exam) state.exam.current = state.current;
-  saveProgress();
-  renderQuestion();
+  goQuestion(Math.min(questionTotal() - 1, state.current + 1)).catch((error) => alert(error.message));
 });
 els.nextUnansweredButton.addEventListener("click", () => goUnanswered(1));
 els.closeReviewButton.addEventListener("click", () => {
-  if (state.reviewReturnMode === "question" && state.exam && state.questions.length) showQuestion();
+  if (state.reviewReturnMode === "question" && state.exam && questionTotal()) showQuestion();
   else showSetup();
 });
 

@@ -68,6 +68,44 @@ function currentExamWrongCount() {
   return wrong;
 }
 
+function questionTotal() {
+  return state.questionTotal || state.questions.length || state.exam?.questionIds?.length || 0;
+}
+
+function resetQuestionCache(total = 0) {
+  state.questionTotal = total;
+  state.questions = Array.from({ length: total });
+  state.loadedQuestionRanges = [];
+  state.questionLoadPromises = new Map();
+}
+
+function mergeQuestionWindow(questions, offset = 0) {
+  questions = Array.isArray(questions) ? questions : [];
+  questions.forEach((question, index) => {
+    state.questions[offset + index] = question;
+  });
+  if (questions.length) state.loadedQuestionRanges.push([offset, offset + questions.length - 1]);
+}
+
+async function ensureQuestionLoaded(index) {
+  if (!state.userId || !state.exam || index < 0 || index >= questionTotal()) return;
+  if (state.questions[index]) return;
+  const key = String(Math.floor(index / 25));
+  if (!state.questionLoadPromises.has(key)) {
+    const url = `/api/exams/questions?userId=${encodeURIComponent(state.userId)}&examId=${encodeURIComponent(state.exam.id)}&center=${index}&limit=25`;
+    state.questionLoadPromises.set(
+      key,
+      api(url)
+        .then((payload) => {
+          mergeQuestionWindow(payload.questions || [], Number(payload.offset || 0));
+          state.questionTotal = Number(payload.total || state.questionTotal || 0);
+        })
+        .finally(() => state.questionLoadPromises.delete(key))
+    );
+  }
+  await state.questionLoadPromises.get(key);
+}
+
 async function updateSelectedQuestionMax() {
   const requestId = state.questionMaxRequest + 1;
   state.questionMaxRequest = requestId;
@@ -203,6 +241,9 @@ async function deleteSelectedExam() {
   if (state.exam?.id === examId) {
     state.exam = null;
     state.questions = [];
+    state.questionTotal = 0;
+    state.loadedQuestionRanges = [];
+    state.questionLoadPromises = new Map();
     state.answers = new Map();
     state.doubts = new Set();
     state.current = 0;
@@ -214,10 +255,12 @@ async function deleteSelectedExam() {
 
 function loadExamPayload(payload) {
   state.exam = payload.exam;
-  state.questions = payload.questions || [];
+  const total = Number(payload.total || state.exam?.questionIds?.length || payload.questions?.length || 0);
+  resetQuestionCache(total);
+  mergeQuestionWindow(payload.questions || [], Number(payload.offset || 0));
   state.answers = new Map(Object.entries(payload.answers || {}));
   state.doubts = new Set(payload.doubts || []);
-  state.current = Math.min(state.exam.current || 0, Math.max(0, state.questions.length - 1));
+  state.current = Math.min(state.exam.current || 0, Math.max(0, questionTotal() - 1));
   renderQuestion();
   renderStats();
 }
@@ -249,8 +292,27 @@ function renderSetup() {
 }
 
 function renderQuestion() {
-  if (!state.questions.length || !state.exam) return;
+  const total = questionTotal();
+  if (!total || !state.exam) return;
   const question = state.questions[state.current];
+  if (!question) {
+    els.sourceLabel.textContent = "正在加载";
+    els.sessionTitle.textContent = `${state.exam.title}${state.exam.completed ? "（已完成）" : ""}`;
+    els.questionIndex.textContent = `第 ${state.current + 1} / ${total} 题`;
+    els.questionType.textContent = "加载中";
+    els.questionStem.textContent = "正在加载题目...";
+    els.optionList.innerHTML = "";
+    els.multiActions.classList.add("hidden");
+    els.submitButton.disabled = true;
+    els.resultCard.classList.add("hidden");
+    els.prevButton.disabled = state.current === 0;
+    els.nextButton.disabled = state.current === total - 1;
+    els.prevUnansweredButton.disabled = findUnanswered(-1) < 0;
+    els.nextUnansweredButton.disabled = findUnanswered(1) < 0;
+    renderStats();
+    ensureQuestionLoaded(state.current).then(renderQuestion).catch((error) => alert(error.message));
+    return;
+  }
   const saved = state.answers.get(question.id);
   const selected = saved?.selected || [];
   const judged = Boolean(saved?.judged);
@@ -258,12 +320,12 @@ function renderQuestion() {
 
   els.sourceLabel.textContent = question.source || "当前试卷";
   els.sessionTitle.textContent = `${state.exam.title}${state.exam.completed ? "（已完成）" : ""}`;
-  els.questionIndex.textContent = `第 ${state.current + 1} / ${state.questions.length} 题`;
+  els.questionIndex.textContent = `第 ${state.current + 1} / ${total} 题`;
   els.questionType.textContent = question.type || (isMulti ? "多选题" : "单选题");
   els.questionStem.textContent = question.stem;
   els.doubtButton.textContent = state.doubts.has(question.id) ? "已标记疑问" : "标记疑问";
   els.doubtButton.classList.toggle("active", state.doubts.has(question.id));
-  els.progressBar.style.width = `${((answeredCount() || state.current + 1) / state.questions.length) * 100}%`;
+  els.progressBar.style.width = `${((answeredCount() || state.current + 1) / total) * 100}%`;
   els.optionList.innerHTML = "";
 
   question.options.forEach((option) => {
@@ -291,7 +353,7 @@ function renderQuestion() {
   if (judged) renderResult(question, saved);
 
   els.prevButton.disabled = state.current === 0;
-  els.nextButton.disabled = state.current === state.questions.length - 1;
+  els.nextButton.disabled = state.current === total - 1;
   els.prevUnansweredButton.disabled = findUnanswered(-1) < 0;
   els.nextUnansweredButton.disabled = findUnanswered(1) < 0;
   renderStats();
@@ -352,7 +414,7 @@ async function saveCurrentAnswer(selected) {
 }
 
 async function toggleDoubt() {
-  if (!state.userId || !state.exam || !state.questions.length) return;
+  if (!state.userId || !state.exam || !questionTotal()) return;
   const question = state.questions[state.current];
   const marked = !state.doubts.has(question.id);
   if (marked) state.doubts.add(question.id);
@@ -375,8 +437,10 @@ async function toggleDoubt() {
 }
 
 function findUnanswered(direction) {
-  for (let index = state.current + direction; index >= 0 && index < state.questions.length; index += direction) {
-    const answer = state.answers.get(state.questions[index].id);
+  const ids = state.exam?.questionIds || [];
+  for (let index = state.current + direction; index >= 0 && index < questionTotal(); index += direction) {
+    const id = ids[index] || state.questions[index]?.id;
+    const answer = id ? state.answers.get(id) : null;
     if (!answer?.judged) return index;
   }
   return -1;
@@ -385,8 +449,17 @@ function findUnanswered(direction) {
 function goUnanswered(direction) {
   const index = findUnanswered(direction);
   if (index < 0) return alert(direction > 0 ? "后面没有未作题。" : "前面没有未作题。");
+  goQuestion(index);
+}
+
+async function goQuestion(index) {
+  const total = questionTotal();
+  if (!total) return;
+  index = Math.max(0, Math.min(total - 1, index));
   state.current = index;
   if (state.exam) state.exam.current = state.current;
+  renderQuestion();
+  await ensureQuestionLoaded(index);
   saveProgress();
   renderQuestion();
 }
@@ -400,7 +473,7 @@ function renderResult(question, saved) {
 
 function renderStats() {
   els.wrongBookStat?.classList.remove("hidden");
-  els.totalCount.textContent = state.questions.length || 0;
+  els.totalCount.textContent = questionTotal();
   let correct = 0;
   let wrong = 0;
   state.answers.forEach((value) => {

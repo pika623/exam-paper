@@ -1,4 +1,4 @@
-﻿package model
+package model
 
 type Option struct {
 	Label string `json:"label"`
@@ -15,7 +15,7 @@ type Question struct {
 	Answer      []string `json:"answer"`
 	AnswerText  string   `json:"answerText"`
 	Explanation string   `json:"explanation"`
-	Raw         string   `json:"raw"`
+	Raw         string   `json:"raw,omitempty"`
 }
 
 type ParseResult struct {
@@ -103,15 +103,21 @@ type ExamSummary struct {
 type ExamPayload struct {
 	Exam      ExamRecord              `json:"exam"`
 	Questions []Question              `json:"questions"`
+	Offset    int                     `json:"offset"`
+	Total     int                     `json:"total"`
 	Answers   map[string]AnswerRecord `json:"answers"`
 	Doubts    []string                `json:"doubts"`
 }
 
-type WrongQuestion struct {
-	Question Question      `json:"question"`
-	Answer   AnswerRecord  `json:"answer"`
-	Wrong    WrongRecord   `json:"wrong"`
-	Doubt    *DoubtRecord  `json:"doubt,omitempty"`
+type ExamQuestionsPayload struct {
+	Questions []Question `json:"questions"`
+	Offset    int        `json:"offset"`
+	Total     int        `json:"total"`
 }
 
-
+type WrongQuestion struct {
+	Question Question     `json:"question"`
+	Answer   AnswerRecord `json:"answer"`
+	Wrong    WrongRecord  `json:"wrong"`
+	Doubt    *DoubtRecord `json:"doubt,omitempty"`
+}

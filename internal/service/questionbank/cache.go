@@ -1,15 +1,17 @@
-﻿package questionbank
+package questionbank
 
 import (
 	"errors"
-	"exam-paper/internal/repository"
 	"exam-paper/internal/model"
+	"exam-paper/internal/repository"
 	"exam-paper/internal/service/parser"
 	"exam-paper/internal/utils"
 	"os"
 	"path/filepath"
 	"sync"
 )
+
+const DefaultExamQuestionWindow = 25
 
 type Service struct {
 	rootDir string
@@ -39,14 +41,6 @@ func (s *Service) RememberQuestions(source string, questions []model.Question) {
 }
 
 func (s *Service) ExamPayloadFor(exam model.ExamRecord) (model.ExamPayload, error) {
-	questions := make([]model.Question, 0, len(exam.QuestionIDs))
-	for _, id := range exam.QuestionIDs {
-		q, ok := s.QuestionByID(id)
-		if !ok {
-			return model.ExamPayload{}, errors.New("试卷中的题目来源已丢失。")
-		}
-		questions = append(questions, q)
-	}
 	if exam.Answers == nil {
 		exam.Answers = map[string]model.AnswerRecord{}
 	}
@@ -54,7 +48,62 @@ func (s *Service) ExamPayloadFor(exam model.ExamRecord) (model.ExamPayload, erro
 	if s.store != nil {
 		doubts = s.store.DoubtIDs(exam.UserID, exam.QuestionIDs)
 	}
-	return model.ExamPayload{Exam: exam, Questions: questions, Answers: exam.Answers, Doubts: doubts}, nil
+	questions, offset, err := s.ExamQuestionWindow(exam, exam.Current, DefaultExamQuestionWindow)
+	if err != nil {
+		return model.ExamPayload{}, err
+	}
+	return model.ExamPayload{
+		Exam:      exam,
+		Questions: questions,
+		Offset:    offset,
+		Total:     len(exam.QuestionIDs),
+		Answers:   exam.Answers,
+		Doubts:    doubts,
+	}, nil
+}
+
+func (s *Service) ExamQuestionsPayload(exam model.ExamRecord, center int, limit int) (model.ExamQuestionsPayload, error) {
+	questions, offset, err := s.ExamQuestionWindow(exam, center, limit)
+	if err != nil {
+		return model.ExamQuestionsPayload{}, err
+	}
+	return model.ExamQuestionsPayload{Questions: questions, Offset: offset, Total: len(exam.QuestionIDs)}, nil
+}
+
+func (s *Service) ExamQuestionWindow(exam model.ExamRecord, center int, limit int) ([]model.Question, int, error) {
+	total := len(exam.QuestionIDs)
+	if total == 0 {
+		return nil, 0, nil
+	}
+	if limit <= 0 {
+		limit = DefaultExamQuestionWindow
+	}
+	if limit > total {
+		limit = total
+	}
+	if center < 0 {
+		center = 0
+	}
+	if center >= total {
+		center = total - 1
+	}
+	offset := center - limit/2
+	if offset < 0 {
+		offset = 0
+	}
+	if offset+limit > total {
+		offset = total - limit
+	}
+	questions := make([]model.Question, 0, limit)
+	for _, id := range exam.QuestionIDs[offset : offset+limit] {
+		q, ok := s.QuestionByID(id)
+		if !ok {
+			return nil, 0, errors.New("试卷中的题目来源已丢失。")
+		}
+		q.Raw = ""
+		questions = append(questions, q)
+	}
+	return questions, offset, nil
 }
 
 func (s *Service) QuestionsBySources(sources []string) ([]model.Question, error) {
@@ -130,6 +179,3 @@ func (s *Service) QuestionSource(questionID string) string {
 	}
 	return ""
 }
-
-
-

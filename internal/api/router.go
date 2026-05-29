@@ -1,4 +1,4 @@
-﻿package api
+package api
 
 import (
 	"exam-paper/internal/controller"
@@ -31,6 +31,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	r.POST("/api/exams", ctrl.CreateExam)
 	r.DELETE("/api/exams", ctrl.DeleteExam)
 	r.GET("/api/exams/current", ctrl.CurrentExam)
+	r.GET("/api/exams/questions", ctrl.ExamQuestions)
 	r.GET("/api/exams/list", ctrl.ExamList)
 	r.POST("/api/exams/answer", ctrl.ExamAnswer)
 	r.POST("/api/exams/progress", ctrl.ExamProgress)
