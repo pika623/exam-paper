@@ -1,0 +1,14 @@
+services:
+  exam-paper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: exam-paper:latest
+    container_name: exam-paper
+    restart: unless-stopped
+    ports:
+      - "16666:16666"
+    volumes:
+      - ./data:/app/data
+      - ./演出协会官方题库题目:/app/演出协会官方题库题目:ro
+      - ./演出协会模拟考:/app/演出协会模拟考:ro

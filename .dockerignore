@@ -1,0 +1,15 @@
+.git
+.gocache*
+data
+dist
+演出协会官方题库题目
+演出协会模拟考
+*.exe
+*.log
+*.zip
+*.rar
+*.tar
+*.tar.gz
+exam-paper
+exam-paper-check.exe
+exam-paper-linux-bin

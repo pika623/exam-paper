@@ -1,0 +1,105 @@
+﻿
+.app-shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rail {
+  width: clamp(430px, 34vw, 620px);
+  min-width: 380px;
+  max-width: 720px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--line);
+  background: rgba(255, 250, 240, 0.8);
+  backdrop-filter: blur(16px);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+  resize: horizontal;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: 7px 7px 0 rgba(182, 62, 47, 0.18);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.brand p,
+.eyebrow,
+small {
+  color: var(--muted);
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 250, 240, 0.72);
+  box-shadow: var(--shadow);
+}
+
+.import-panel {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.account-panel {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.compact-head {
+  padding: 0 0 10px;
+  border-bottom: 0;
+}
+
+.account-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.drop-zone {
+  min-height: 130px;
+  border: 1px dashed #a99a87;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  background:
+    linear-gradient(135deg, rgba(182, 62, 47, 0.09), transparent 45%),

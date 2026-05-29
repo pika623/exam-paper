@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>题库刷题</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="rail">
+        <div class="brand">
+          <div class="brand-mark">卷</div>
+          <div>
+            <h1>题库刷题</h1>
+            <p id="libraryStatus">正在读取题库</p>
+          </div>
+        </div>
+
+        <section class="panel account-panel">
+          <div class="panel-head compact-head">
+            <h2>账号</h2>
+            <button id="clearUserButton" class="danger-button" type="button">清空数据</button>
+          </div>
+          <div class="account-row">
+            <select id="userSelect" aria-label="选择账号"></select>
+            <input id="userNameInput" type="text" placeholder="新账号名称" />
+          </div>
+          <button id="registerButton" class="primary-button" type="button">注册账号</button>
+        </section>
+
+        <section class="panel import-panel hidden">
+          <label class="drop-zone" for="fileInput">
+            <input id="fileInput" type="file" accept=".pdf,.docx" multiple />
+            <span class="drop-title">导入 PDF / DOCX</span>
+            <span class="drop-subtitle">导入后可立即组卷刷题</span>
+          </label>
+          <input id="folderInput" class="hidden-file-input" type="file" accept=".pdf,.docx" webkitdirectory directory multiple />
+          <label class="folder-button" for="folderInput">导入目录</label>
+        </section>
+
+        <section class="panel library-panel">
+          <div class="panel-head">
+            <h2>选择题库来源</h2>
+            <span id="libraryCount">0</span>
+          </div>
+          <div id="libraryList" class="library-list selectable"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="sourceLabel">未选择题库</p>
+            <h2 id="sessionTitle">选择账号和题库后开始</h2>
+          </div>
+          <div class="stats">
+            <div>
+              <span id="totalCount">0</span>
+              <small>题</small>
+            </div>
+            <div>
+              <span id="correctCount">0</span>
+              <small>对</small>
+            </div>
+            <div>
+              <span id="wrongCount">0</span>
+              <small>错</small>
+            </div>
+            <div>
+              <span id="wrongBookCount">0</span>
+              <small>错题</small>
+            </div>
+          </div>
+        </header>
+
+        <section class="setup-stage" id="setupStage">
+          <div class="setup-card">
+            <div>
+              <p class="eyebrow">组卷设置</p>
+              <h3>从多个来源抽一套题</h3>
+            </div>
+            <label class="field-label" for="questionCountInput">题目数量</label>
+            <div class="question-count-row">
+              <input id="questionCountInput" type="number" min="1" value="20" />
+              <button id="maxQuestionButton" type="button">max</button>
+            </div>
+            <p id="questionMaxHint" class="field-hint">选择题库来源后显示最大题量</p>
+            <label class="field-label" for="examSelect">未完成试卷</label>
+            <div class="exam-select-row">
+              <select id="examSelect"></select>
+              <button id="deleteExamButton" class="danger-button" type="button">删除</button>
+            </div>
+            <div class="setup-actions">
+              <button id="startExamButton" class="primary-button" type="button">生成试卷</button>
+              <button id="continueExamButton" type="button">进入选中试卷</button>
+              <button id="examWrongButton" type="button">本套错题</button>
+              <button id="wrongBookButton" type="button">错题库</button>
+              <button id="wrongExamButton" type="button">刷错题</button>
+              <button id="featuredWrongButton" type="button">刷精选错题</button>
+              <button id="doubtBookButton" type="button">疑问库</button>
+              <button id="doubtExamButton" type="button">刷疑问题</button>
+            </div>
+          </div>
+          <div class="empty-copy">
+            <p>选中左侧一个或多个题库，设置数量后生成一套练习。没答完的试卷会保留进度。</p>
+          </div>
+        </section>
+
+        <section class="question-stage hidden" id="questionStage">
+          <div class="progress-line">
+            <div id="progressBar"></div>
+          </div>
+
+          <article class="question-card">
+            <div class="question-meta">
+              <span id="questionIndex">第 0 / 0 题</span>
+              <span id="questionType">题型</span>
+            </div>
+            <button id="doubtButton" class="doubt-button" type="button">标记疑问</button>
+            <h3 id="questionStem"></h3>
+            <div id="optionList" class="option-list"></div>
+            <div class="multi-actions hidden" id="multiActions">
+              <button id="submitButton" class="primary-button" type="button">提交答案</button>
+            </div>
+          </article>
+
+          <article class="result-card hidden" id="resultCard">
+            <div class="result-head">
+              <strong id="resultTitle"></strong>
+              <span id="answerBadge"></span>
+            </div>
+            <div class="analysis">
+              <h4>解析</h4>
+              <p id="explanationText"></p>
+            </div>
+          </article>
+
+          <footer class="navigator">
+            <button id="backSetupButton" type="button">返回组卷</button>
+            <button id="prevUnansweredButton" type="button">上个未作</button>
+            <button id="prevButton" type="button">上一题</button>
+            <button id="nextButton" class="primary-button" type="button">下一题</button>
+            <button id="nextUnansweredButton" type="button">下个未作</button>
+          </footer>
+        </section>
+
+        <section class="review-stage hidden" id="reviewStage">
+          <div class="review-head">
+            <div>
+              <p class="eyebrow" id="reviewMeta">错题</p>
+              <h3 id="reviewTitle">错题列表</h3>
+            </div>
+            <button id="closeReviewButton" type="button">返回</button>
+          </div>
+          <div id="reviewList" class="review-list"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/users.js"></script>
+    <script src="/static/js/library.js"></script>
+    <script src="/static/js/exam.js"></script>
+    <script src="/static/js/review.js"></script>
+    <script src="/static/js/events.js"></script>
+  </body>
+</html>

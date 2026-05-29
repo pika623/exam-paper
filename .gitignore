@@ -1,0 +1,28 @@
+# Runtime data
+data/
+
+# Local question-bank source files
+演出协会官方题库题目/
+演出协会模拟考/
+
+# Build outputs and package artifacts
+exam-paper.exe
+exam-paper
+exam-paper-check.exe
+exam-paper-linux-bin
+dist/
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.log
+
+# Go cache and local tooling
+.gocache/
+.gocache-*/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
