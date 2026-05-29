@@ -37,7 +37,8 @@ http://127.0.0.1:16666/
 ## Docker Compose
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 Docker 镜像内不包含 `data` 数据目录，也不包含题库文件。Compose 会挂载：

@@ -1,9 +1,7 @@
 services:
   exam-paper:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: exam-paper:latest
+    image: ghcr.io/pika623/exam-paper:latest
+    pull_policy: always
     container_name: exam-paper
     restart: unless-stopped
     ports:
